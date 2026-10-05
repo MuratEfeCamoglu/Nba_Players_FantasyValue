@@ -1,0 +1,65 @@
+{% extends "site/base.html.j2" %}
+{% block title %}Hesaplama Yöntemi{% endblock %}
+{% block content %}
+<div class="doc-layout">
+<nav class="toc" aria-label="Bölümler">
+  <ol>
+{% for title in sections %}
+    <li><a href="#bolum-{{ loop.index }}">{{ title }}</a></li>
+{% endfor %}
+  </ol>
+</nav>
+<article class="doc">
+{{ hesaplama_parts[0] }}
+<section class="calculator card" aria-labelledby="calc-title">
+  <h3 id="calc-title">Etki hesaplayıcısı</h3>
+  <p>İsabet ve deneme sayısını girin; etki ve z-skoru sezon toplamı modunun havuz parametreleriyle hesaplanır. Aynı yüzdede deneme arttıkça etki de aynı oranda büyür.</p>
+  <div class="calc-grid">
+    <label class="field">Kategori
+      <select id="calc-category">
+        <option value="FG_PCT">Saha içi (FG)</option>
+        <option value="FT_PCT">Serbest atış (FT)</option>
+      </select>
+    </label>
+    <label class="field">İsabet
+      <input type="number" id="calc-made" min="0" step="1" value="6" inputmode="numeric">
+    </label>
+    <label class="field">Deneme
+      <input type="number" id="calc-attempts" min="0" step="1" value="10" inputmode="numeric">
+    </label>
+  </div>
+  <dl class="calc-out">
+    <div><dt>Lig yüzdesi</dt><dd id="calc-league">—</dd></div>
+    <div><dt>Oyuncu yüzdesi</dt><dd id="calc-pct">—</dd></div>
+    <div class="calc-key"><dt>Etki</dt><dd id="calc-impact">—</dd></div>
+    <div class="calc-key"><dt>z-skoru</dt><dd id="calc-z">—</dd></div>
+  </dl>
+  <p class="calc-formula" id="calc-formula"></p>
+  <p class="calc-error" id="calc-error" hidden></p>
+  <script type="application/json" id="calc-params">{{ calc_json }}</script>
+</section>
+{{ hesaplama_parts[1] }}
+<figure class="pe-chart card" aria-labelledby="pe-title">
+  <figcaption id="pe-title">1 birim kaç sayı eder?
+    <small>Sayı eşdeğeri = σ_PTS / σ. Örnek: sezon toplamında 1 blok = {{ points_chart[5].total_text }} sayı. Yüzde kategorilerinde birim, lig ortalamasının üstündeki 1 isabettir.</small>
+  </figcaption>
+  <ul class="pe-legend">
+    <li class="total">Sezon toplamı</li>
+    <li class="per-game">Maç başı</li>
+  </ul>
+  <ol class="pe-rows">
+{% for r in points_chart %}
+    <li class="pe-row" data-category="{{ r.code }}" data-total="{{ r.total_text }}" data-per-game="{{ r.per_game_text }}">
+      <div class="pe-name"><strong>{{ r.unit }}</strong><span>{{ r.short }}</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:{{ r.total_width }}%"></div></div><span class="pe-num">{{ r.total_text }} sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:{{ r.per_game_width }}%"></div></div><span class="pe-num">{{ r.per_game_text }} sayı</span></div>
+      </div>
+    </li>
+{% endfor %}
+  </ol>
+</figure>
+{{ hesaplama_parts[2] }}
+</article>
+</div>
+{% endblock %}

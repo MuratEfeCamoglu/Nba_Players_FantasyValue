@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %} · Fantezi NBA 9-Cat {{ season }}</title>
+<script>
+  /* Seçilen temayı ilk boyamadan önce uygula (titreme olmasın); depolama kapalıysa sistem teması. */
+  (function () {
+    try {
+      var t = localStorage.getItem("fantasy9cat-tema");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topband">
+  <div class="wrap topband-inner">
+    <a class="brand" href="index.html"><span class="brand-name">9-Cat <span>Değer</span></span></a>
+    <ul class="facts" aria-label="Veri ve lig bilgisi">
+      <li><strong>{{ season }}</strong> normal sezonu</li>
+      <li><strong>{{ league.num_teams }} takım × {{ league.roster_size }}</strong> kadro</li>
+      <li>Veri tarihi <strong>{{ data_as_of }}</strong></li>
+    </ul>
+    <nav aria-label="Sayfalar">
+      <a href="index.html"{% if page == "index.html" %} aria-current="page"{% endif %}>Sıralama</a>
+      <a href="hesaplama.html"{% if page == "hesaplama.html" %} aria-current="page"{% endif %}>Hesaplama</a>
+      <a href="../Deger.pdf">PDF</a>
+    </nav>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Temayı değiştir">
+      <span class="icon" aria-hidden="true"></span><span class="theme-label">Tema</span>
+    </button>
+  </div>
+</header>
+<main class="wrap">
+{% block content %}{% endblock %}
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    Veri: stats.nba.com · {{ season }} normal sezonu · havuz {{ league.pool_size }} oyuncu · Değer ölçeği: 1. aday = 100, {{ league.replacement_rank }}. aday (yedek seviyesi) = 0 · Fontlar: Inter ve Barlow Condensed (SIL OFL 1.1)
+  </div>
+</footer>
+<script src="assets/app.js"></script>
+</body>
+</html>

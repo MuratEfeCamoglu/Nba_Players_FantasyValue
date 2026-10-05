@@ -1,0 +1,198 @@
+{#- Hesaplama.md şablonu. Tüm sayılar context.build_context() içinde biçimlenir; burada hesap yok. -#}
+# Fantezi NBA 9-Cat Oyuncu Değerleme — Hesaplama Yöntemi
+
+{{ season }} NBA normal sezonu · {{ league.num_teams }} takım × {{ league.roster_size }} oyunculuk H2H 9-cat lig · {{ pool.n_players }} oyuncu değerlendi
+
+Bu belge, `values_total.csv`, `values_per_game.csv` ve `multipliers.csv` dosyalarındaki her sayının nasıl hesaplandığını anlatır. Tüm sayılar aynı veri bağlamından üretilir; ondalık ayırıcı virgüldür, boş değerler "—" ile gösterilir.
+
+## {{ sections[0] }}
+
+9-cat ligde her hafta 9 kategorinin her biri ayrı ayrı kazanılır; her kategori eşit puan değerindedir.
+
+| Kategori | Kod | Kısa ad | Yön |
+|---|---|---|---|
+{% for c in categories %}
+| {{ c.label }} | `{{ c.code }}` | {{ c.short }} | {{ c.direction }} |
+{% endfor %}
+
+Oynanan maç sayısı (`GP`) bir kategori değildir; ama sezon toplamlarını doğrudan etkiler (bkz. bölüm 8).
+
+## {{ sections[1] }}
+
+Kategoriler eşit puan verir ama istatistikler eşit nadirlikte değildir. Bir oyuncunun 100 sayı fazla atması ile 100 blok fazla yapması aynı şey değildir: ligde oyuncular arasındaki blok farkları sayı farklarından çok daha küçüktür, bu yüzden bir blok farkı kategoriyi kazanmaya çok daha fazla katkı yapar.
+
+Z-skor bu farkı ölçer: bir oyuncunun bir kategoride havuz ortalamasından kaç **standart sapma (σ)** uzakta olduğunu söyler. Böylece farklı birimlerdeki 9 kategori aynı ölçeğe gelir ve toplanabilir.
+
+Sezon toplamı modunda (bkz. bölüm 7):
+
+- 1 blok ≈ **{{ mult.total.BLK.points_equivalent_text }}** sayı,
+- 1 top çalma ≈ **{{ mult.total.STL.points_equivalent_text }}** sayı,
+- 1 üçlük ≈ **{{ mult.total.FG3M.points_equivalent_text }}** sayı değerindedir.
+
+## {{ sections[2] }}
+
+Ortalama (μ) ve standart sapma (σ), tüm oyunculardan değil, **havuzdaki {{ league.pool_size }} oyuncudan** hesaplanır ({{ league.num_teams }} takım × {{ league.roster_size }} kadro). Kadroya hiç girmeyecek yüzlerce yedek oyuncu ortalamayı düşürür ve σ'yı şişirirdi; havuz, ligde gerçekten rekabet eden oyuncuları temsil eder. Havuz yalnızca μ ve σ'yı belirler: sezonda en az 1 maç oynayan **herkes** ({{ pool.n_players }} oyuncu) değerlenir ve sıralanır.
+
+Havuz kendini belirleyen bir döngüyle bulunur:
+
+1. Başlangıç havuzu: dakikaya göre ilk {{ league.pool_size }} aday.
+2. Bu havuzdan μ ve σ hesaplanır, herkesin ham değeri bulunur.
+3. Yeni havuz: ham değere göre ilk {{ league.pool_size }} aday.
+4. Havuz değişmeyene kadar (en fazla {{ league.max_iterations }} kez) 2–3 tekrarlanır.
+
+| Mod | Havuz adayları | İterasyon | Yakınsadı mı? |
+|---|---|---|---|
+| Sezon toplamı | GP ≥ 1 ({{ pool.n_players }} oyuncu) | {{ pool.iterations_total }} | {{ "Evet" if pool.converged_total else "Hayır" }} |
+| Maç başı | GP ≥ {{ league.min_gp_pool_per_game }} ({{ pool.n_candidates_per_game }} oyuncu) | {{ pool.iterations_per_game }} | {{ "Evet" if pool.converged_per_game else "Hayır" }} |
+
+{% if not (pool.converged_total and pool.converged_per_game) %}
+> **Uyarı:** Havuz en az bir modda {{ league.max_iterations }} iterasyonda yakınsamadı; son havuz kullanıldı. Sıralamanın alt sınırındaki oyuncular havuza girip çıkıyor olabilir.
+
+{% endif %}
+{% for w in pool.warnings %}
+> **Uyarı:** {{ w }}
+
+{% endfor %}
+Maç başı modda havuza aday olmak için en az {{ league.min_gp_pool_per_game }} maç gerekir; birkaç maçlık örneklemin σ'yı bozmaması için.
+
+## {{ sections[3] }}
+
+Sayı, ribaund, asist, üçlük, top çalma ve blok için:
+
+```
+z = (x − μ) / σ
+```
+
+`x` oyuncunun istatistiği, `μ` ve `σ` havuzun ortalaması ve popülasyon standart sapmasıdır. Örneğin sezon toplamı modunda `PTS` için μ = {{ mult.total.PTS.mu_text }}, σ = {{ mult.total.PTS.sigma_text }}: ortalamadan {{ mult.total.PTS.sigma_text }} sayı fazla atan oyuncu bu kategoride +1 z alır.
+
+## {{ sections[4] }}
+
+Top kaybında az olan kazanır, bu yüzden işaret terstir:
+
+```
+z = (μ − x) / σ
+```
+
+Sezon toplamı modunda `TOV` için μ = {{ mult.total.TOV.mu_text }}, σ = {{ mult.total.TOV.sigma_text }}. Ortalamadan az top kaybı yapan artı, çok yapan eksi alır.
+
+## {{ sections[5] }}
+
+Yüzde kategorileri yüzdeyle değil, **hacim ağırlıklı etki** ile z'lenir. Takımın haftalık yüzdesi toplam isabet / toplam denemedir; çok deneme yapan oyuncu takım yüzdesini çok daha fazla oynatır.
+
+```
+p_lg = havuzdaki toplam isabet / havuzdaki toplam deneme
+etki = isabet − p_lg × deneme        (= (oyuncu% − p_lg) × deneme; deneme 0 ise etki 0)
+z    = (etki − μ_etki) / σ_etki
+```
+
+Aynı yüzdeyi tutturan iki oyuncudan çok deneme yapanın etkisi, yüzde lig ortalamasının üstündeyse daha çok artı, altındaysa daha çok eksidir:
+
+| Atış | Oyuncu % | Lig % | Etki |
+|---|---|---|---|
+{% for e in impact.fixed %}
+| {{ e.shot_text }} | {{ e.player_pct_text }} | {{ e.league_pct_text }} | {{ e.impact_text }} |
+{% endfor %}
+
+6/10 ile 60/100 aynı yüzdedir (%60) ama 60/100'ün etkisi 10 kat büyüktür. Lig ortalaması %65 olsaydı aynı 60/100 takımın yüzdesini düşürür ve eksi yazardı.
+
+Gerçek veride sezon toplamı modunda saha içi lig yüzdesi {{ impact.league_pct_text }}. Bu değerle:
+
+| Atış | Etki | z (`FG_PCT`) |
+|---|---|---|
+{% for e in impact.real %}
+| {{ e.shot_text }} | {{ e.impact_text }} | {{ e.z_text }} |
+{% endfor %}
+
+Deneme sayısı 0 olan oyuncunun yüzdesi tanımsızdır ve "—" ile gösterilir; etkisi 0 kabul edilir, z-skoru yine hesaplanır.
+
+<!-- etki-hesaplayici -->
+
+## {{ sections[6] }}
+
+- **μ, σ:** havuzun ortalaması ve popülasyon standart sapması (yüzde kategorilerinde etkinin).
+- **Çarpan = 1 / σ:** bir kategorideki 1 birimlik istatistiğin z-skor karşılığı. Yüzde kategorilerinde birim "lig ortalamasının üstündeki 1 isabet"tir.
+- **Sayı eşdeğeri = σ_PTS / σ:** 1 birimin kaç sayıya denk geldiği.
+- **Ortalama oranı = μ_PTS / μ:** yalnızca bilgi amaçlı; yüzde kategorilerinde etki ortalaması ≈ 0 olduğundan boştur.
+
+**Neden ortalama değil de σ?** Kategoriyi kazanmak, rakiplerden *ne kadar ayrıştığına* bağlıdır. Ortalama oranı bir istatistiğin ne kadar sık olduğunu söyler; σ ise oyuncuların o kategoride birbirinden ne kadar farklılaştığını. Örneğin bloklarda ortalama düşüktür ama asıl önemli olan, bir oyuncunun bloklarla havuzdan ne kadar ayrışabildiğidir; bunu σ ölçer.
+
+<!-- sayi-esdegeri-grafigi -->
+
+### Sezon toplamı
+
+<!-- mode:total -->
+| Kategori | μ | σ | Çarpan (1/σ) | Sayı eşdeğeri | Ortalama oranı | Lig % |
+|---|---|---|---|---|---|---|
+{% for r in multipliers.total %}
+| {{ r.label }} (`{{ r.code }}`) | {{ r.mu_text }} | {{ r.sigma_text }} | {{ r.multiplier_text }} | {{ r.points_equivalent_text }} | {{ r.mean_ratio_text }} | {{ r.league_pct_text }} |
+{% endfor %}
+<!-- /mode -->
+
+### Maç başı
+
+<!-- mode:per_game -->
+| Kategori | μ | σ | Çarpan (1/σ) | Sayı eşdeğeri | Ortalama oranı | Lig % |
+|---|---|---|---|---|---|---|
+{% for r in multipliers.per_game %}
+| {{ r.label }} (`{{ r.code }}`) | {{ r.mu_text }} | {{ r.sigma_text }} | {{ r.multiplier_text }} | {{ r.points_equivalent_text }} | {{ r.mean_ratio_text }} | {{ r.league_pct_text }} |
+{% endfor %}
+<!-- /mode -->
+
+## {{ sections[7] }}
+
+Ana sıralama **sezon toplamı** üzerindendir: çok maç oynayan daha çok katkı (ve daha çok top kaybı) üretir, fantezi takımına da o kadar çok hafta katkı verir. **Maç başı** sıralama, oyuncunun sahadayken ne ürettiğini gösterir; sakatlık nedeniyle az oynayanlar burada yükselir. Maç başı modda {{ league.min_gp_pool_per_game }} maçtan az oynayan {{ comparison.n_low_sample }} oyuncu sıralamada yer alır ama "az maç" olarak işaretlenir ve havuza giremez.
+
+Sezon toplamında ilk {{ comparison.top | length }}:
+
+| Oyuncu | Takım | MS | Toplam sırası | Toplam değer | Maç başı sırası | Maç başı değer |
+|---|---|---|---|---|---|---|
+{% for r in comparison.top %}
+| {{ r.player_name }} | {{ r.team }} | {{ r.gp }} | {{ r.rank_total }} | {{ r.value_total_text }} | {{ r.rank_pg }} | {{ r.value_pg_text }} |
+{% endfor %}
+
+Maç başı sıralamada en çok yükselen {{ comparison.risers | length }} oyuncu (GP ≥ {{ league.min_gp_pool_per_game }}):
+
+| Oyuncu | Takım | MS | Toplam sırası | Maç başı sırası | Fark |
+|---|---|---|---|---|---|
+{% for r in comparison.risers %}
+| {{ r.player_name }} | {{ r.team }} | {{ r.gp }} | {{ r.rank_total }} | {{ r.rank_pg }} | {{ r.diff_text }} |
+{% endfor %}
+
+## {{ sections[8] }}
+
+Ham değer (9 z-skorun toplamı) 0–100 ölçeğine taşınır:
+
+```
+değer = 100 × (ham − ham_yedek) / (ham_1 − ham_yedek)
+```
+
+- `ham_1`: havuz adayları arasında en yüksek ham değer ({{ scale.top_name }}, {{ scale.top_raw_text }}) → 100.
+- `ham_yedek`: havuz adayları arasında {{ scale.replacement_rank }}. sıradaki ham değer ({{ scale.replacement_raw_text }}) → 0. Bu, {{ league.num_teams }} takımın toplam {{ league.pool_size }} kadro yerine giremeyen ilk oyuncu, yani serbest oyuncu (yedek) seviyesidir.
+- Yedek seviyesinin altındaki oyuncular negatif değer alır.
+
+Örnek: {{ scale.example_rank }}. sıradaki {{ scale.example_name }}, ham {{ scale.example_raw_text }} → 100 × ({{ scale.example_raw_text }} − ({{ scale.replacement_raw_text }})) / ({{ scale.top_raw_text }} − ({{ scale.replacement_raw_text }})) = **{{ scale.example_value_text }}** (CSV: {{ scale.example_csv_value_text }}).
+
+Maç başı modda ölçeği yalnızca GP ≥ {{ league.min_gp_pool_per_game }} adaylar belirler (ham_1 = {{ scale.pg_top_raw_text }}, ham_yedek = {{ scale.pg_replacement_raw_text }}). Daha az maç oynayanların değeri aynı ölçekle hesaplanır ve 100'ü aşabilir (bu sezon {{ scale.pg_over_100 }} oyuncu).
+
+## {{ sections[9] }}
+
+Sezon toplamı modunda {{ worked_example.rank }}. sıradaki oyuncu: **{{ worked_example.player_name }}** ({{ worked_example.team }}, {{ worked_example.gp }} maç). μ ve σ, bölüm 7'deki tablodan alınır.
+
+| Kategori | Oyuncu | μ | σ | Hesap | z |
+|---|---|---|---|---|---|
+{% for r in worked_example.rows %}
+| {{ r.label }} (`{{ r.code }}`) | {{ r.value_text }} | {{ r.mu_text }} | {{ r.sigma_text }} | {{ r.calc_text }} | {{ r.z_text }} |
+{% endfor %}
+
+Toplam z (ham değer): **{{ worked_example.z_sum_text }}** (CSV'deki `raw_total`: {{ worked_example.csv_raw_total_text }}). Ölçeklenmiş değer: **{{ worked_example.value_text }}**.
+
+Küçük farklar, tablodaki μ ve σ'nın 6 ondalığa yuvarlanmış olmasından gelir.
+
+## {{ sections[10] }}
+
+- **Az maç oynayanlar toplam modda top kaybından artı alır.** Top kaybı sezon toplamı olarak sayıldığı için az oynayan oyuncunun top kaybı da azdır. Örneğin {{ limitations.tov_name }} {{ limitations.tov_gp }} maçta {{ limitations.tov_value_text }} top kaybıyla bu kategoride en yüksek z'yi aldı ({{ limitations.tov_z_text }}). Diğer kategorilerdeki eksi değerler bunu genellikle dengeler, ama sıralamanın alt kısmında etkisi görülebilir.
+- **Kategori ağırlıkları eşittir.** Her kategori 1 puan sayılır; "punt" (bir kategoriyi bilerek bırakma) stratejileri hesaba katılmaz.
+- **Geçmiş veri geleceği garanti etmez.** Değerler {{ season }} normal sezonunun kapanmış verisine dayanır; yaş, sakatlık, rol ve takım değişiklikleri yansıtılmaz.
+- **Maç başı değer az örneklemde yanıltıcı olabilir.** {{ league.min_gp_pool_per_game }} maçtan az oynayan oyuncular işaretlenir; değerleri dikkatle yorumlanmalıdır.
+- **Tanımsız yüzdeler.** Hiç deneme yapmayan oyuncuların ilgili yüzdesi "—" ile gösterilir ({{ limitations.n_empty_pct }} oyuncu); etkileri 0 kabul edilir.
+- **Havuz yaklaşıktır.** {{ league.pool_size }} kişilik havuz, gerçek liglerdeki kadro seçimlerini birebir yansıtmaz; havuz büyüklüğü tek bir ayarla değiştirilebilir.

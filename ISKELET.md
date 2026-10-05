@@ -54,6 +54,7 @@ Diğer terimler:
 | F12 | Web sitesi — hesaplama sayfası | Zorunlu | `output/site/hesaplama.html`, `Hesaplama.md` ile aynı 11 başlığı ve aynı sayıları içerir (aynı veri bağlamından üretilir; test 3 ondalık eşleşmeyi kontrol eder). |
 | F13 | Site sırası kuralı | Zorunlu | `python -m fantasy9cat site`, `values_total.csv`, `values_per_game.csv`, `multipliers.csv`, `Hesaplama.md` ve `Deger.pdf` yoksa siteyi üretmez; eksik dosyaları listeleyip çıkış kodu 1 döner (test). |
 | F14 | Etki hesaplayıcısı | Önemli | `hesaplama.html` içinde kullanıcı FGM/FGA (veya FTM/FTA) girer; sayfa etkiyi ve z-skoru `total` modunun havuz parametreleriyle (`league_pct`, μ_imp, σ_imp — sayfaya gömülü) gösterir. Elle kontrol: 6/10 ve 60/100 girişlerinde etki oranı 1:10'dur. |
+| F16 | Site görsel tasarımı | Aşama 7 | Tüm renkler, aralıklar ve yazı boyutları `style.css` başında CSS değişkenleri (`--renk-*`, `--aralik-*`) olarak tanımlıdır. Açık ve koyu tema `prefers-color-scheme` ile otomatik seçilir ve elle değiştirilebilir. Metin/arka plan kontrastı ≥ 4.5:1 (WCAG AA; tarayıcı geliştirici araçlarıyla ölçülür). Fontlar `assets/fonts/` altında yerel woff2 dosyalarıdır, harici font isteği yoktur. İlk 10 oyuncu için öne çıkan kart görünümü vardır. `output/site/` toplamı < 3 MB. F11 ve F14'ün elle kontrol listeleri yeniden geçer. |
 | F15 | Uçtan uca komut | Zorunlu | `python -m fantasy9cat all` ham CSV varsa ağa çıkmadan compute → report → site sırasıyla çalışır, toplam süre < 60 sn (komut bitince geçen süreyi saniye olarak loglar); ham CSV yoksa önce `fetch` çalıştırır. |
 
 ### Sonraki Sürümler
@@ -62,7 +63,6 @@ Diğer terimler:
 - Oyuncu kademeleri (tier) ve kademe sınırlarının görselleştirilmesi.
 - Haftalık H2H simülasyonuyla kategori kazanma olasılığı.
 - Birden fazla sezonun ağırlıklı ortalaması; 2026-27 projeksiyonu.
-- Siteyi GitHub Pages'e yayınlama.
 
 ### Kapsam Dışı
 - Canlı/güncel sezon verisi ve otomatik güncelleme — proje geçen sezonun kapanmış verisiyle çalışır.
@@ -123,9 +123,9 @@ Gösterim: P havuz, |P| = N = 240. Ortalama ve standart sapma havuz üzerinden, 
 `PLAYER_ID (int), PLAYER_NAME (str), TEAM_ABBREVIATION (str), GP, MIN, FGM, FGA, FG3M, FTM, FTA, REB, AST, STL, BLK, TOV, PTS` (sayısallar ≥ 0). Sezonda takım değiştiren oyuncu tek satırdır; takım = son takımı.
 
 **İşlenmiş** — `data/processed/`:
-- `values_total.csv`, `values_per_game.csv`: `rank, player_id, player_name, team, gp, min, pts, reb, ast, fg3m, stl, blk, tov, fgm, fga, fg_pct, ftm, fta, ft_pct, z_pts, z_reb, z_ast, z_fg3m, z_stl, z_blk, z_tov, z_fg_pct, z_ft_pct, raw_total, value, in_pool` (bool), `low_sample` (bool; `per_game`'de GP < 20 ise True, `total`'da her zaman False). `values_per_game.csv`'de sayma kolonları ve `min, fgm, fga, ftm, fta` maç başı değerlerdir; `gp` ve yüzdeler değişmez. Ondalıklar 6 haneye yuvarlanır (deterministik çıktı için).
+- `values_total.csv`, `values_per_game.csv`: `rank, player_id, player_name, team, gp, min, pts, reb, ast, fg3m, stl, blk, tov, fgm, fga, fg_pct, ftm, fta, ft_pct, z_pts, z_reb, z_ast, z_fg3m, z_stl, z_blk, z_tov, z_fg_pct, z_ft_pct, raw_total, value, in_pool` (bool), `low_sample` (bool; `per_game`'de GP < 20 ise True, `total`'da her zaman False). `values_per_game.csv`'de sayma kolonları ve `min, fgm, fga, ftm, fta` maç başı değerlerdir; `gp` ve yüzdeler değişmez. Deneme sayısı 0 olan oyuncuda (`fga = 0` veya `fta = 0`) ilgili yüzde kolonu **boş** bırakılır (0 değil, çünkü %0 kötü şutör izlenimi verir); etki ve z-skoru yine tanımlıdır (etki = 0). Kullanıcıya dönük çıktılarda boş yüzde "—" olarak gösterilir. Ondalıklar 6 haneye yuvarlanır (deterministik çıktı için).
 - `multipliers.csv`: `mode, category, mu, sigma, multiplier, points_equivalent, mean_ratio_to_pts, league_pct` (`league_pct` yalnızca yüzde kategorilerinde dolu, diğerlerinde boş).
-- `meta.json`: `season, season_type, source_file, source_sha256, n_players_total, n_players_per_game, pool_size, iterations_total, converged_total, iterations_per_game, converged_per_game, replacement_raw_total, replacement_raw_per_game`. Zaman damgası **içermez**; anahtarlar sıralı (`sort_keys=True`) yazılır (deterministiklik için).
+- `meta.json`: `season, season_type, source_file, source_sha256, n_players_total, n_players_per_game, pool_size, iterations_total, converged_total, iterations_per_game, converged_per_game, replacement_raw_total, replacement_raw_per_game, warnings` (`warnings`: Türkçe uyarı metinlerinin listesi, sorun yoksa `[]`; ör. §3.3 adım 7'deki yetersiz aday durumu, yakınsamayan havuz iterasyonu). Zaman damgası **içermez**; anahtarlar sıralı (`sort_keys=True`) yazılır (deterministiklik için).
 
 ### 3.5 Çıktılar
 
@@ -185,6 +185,7 @@ fantasy-9cat/
     ├── fixtures/
     │   ├── make_sample_players.py  # numpy seed=42 ile deterministik üretici
     │   └── sample_players.csv      # üreticinin çıktısı: 500 satır sentetik veri (≥ 300'ü GP ≥ 20, ≥ 30'u GP < 20), Şengün ve Jokić dahil
+    ├── test_fetch.py           # nba_api mock'lanır, ağa çıkmaz
     ├── test_schema.py
     ├── test_valuation.py
     ├── test_pipeline.py
@@ -196,7 +197,7 @@ fantasy-9cat/
 ## 5. Kısıtlar
 
 - **Teknik:** Python ≥ 3.11; yalnızca açık kaynak kütüphaneler: pandas, numpy, nba_api, jinja2, reportlab (çalışma), pytest, pypdf, ruff (geliştirme). Web sitesi harici kütüphane/CDN kullanmaz (vanilla JS + CSS).
-- **Performans:** `compute + report + site` (fetch hariç) ≤ 60 sn; `Deger.pdf` < 5 MB; `output/site/` toplamı < 2 MB; sitede sıralama/filtre işlemi 600 satırda < 200 ms (`app.js` süreyi `console.debug` ile yazar).
+- **Performans:** `compute + report + site` (fetch hariç) ≤ 60 sn; `Deger.pdf` < 5 MB; `output/site/` toplamı < 2 MB (Aşama 7'den sonra < 3 MB, F16); sitede sıralama/filtre işlemi 600 satırda < 200 ms (`app.js` süreyi `console.debug` ile yazar).
 - **Çevrimdışı:** `fetch` dışındaki tüm komutlar ve site ağ bağlantısı olmadan çalışır; sitede `http://` veya `https://` ile başlayan `src`/`href` yoktur (test).
 - **Tekrarlanabilirlik:** Aynı ham CSV → byte-düzeyinde aynı `data/processed/` dosyaları.
 - **Güvenlik/gizlilik:** API anahtarı veya gizli bilgi yok; kişisel veri toplanmaz.
@@ -214,6 +215,7 @@ fantasy-9cat/
 | 4 | `report_pdf.py` (F10) | F10 kabul kriteri. |
 | 5 | `site.py` ve şablonlar (F11–F14) — **yalnızca Aşama 2–4 bittikten sonra** | F11–F14 kabul kriterleri ve elle kontrol listesi. |
 | 6 | `all` komutu, README, son doğrulama (F15) | F15; tüm testler geçer; README kurulum adımlarıyla temiz klonda çalışır. |
+| 7 | Site görsel tasarımı (F16) — **yalnızca Aşama 6 bittikten sonra** | F16 kabul kriteri; tüm testler geçer. |
 
 ## 7. Riskler
 
@@ -237,7 +239,7 @@ fantasy-9cat/
 - **V5:** Maç sayısının etkisi için ana sıralama **sezon toplamı** üzerindendir (çok oynayan daha çok katkı ve daha çok top kaybı üretir). Ek olarak **maç başı** sıralama verilir; bu sıralamada da herkes yer alır, GP < 20 olanlar işaretlenir.
 - **V6:** Ölçek: 1. oyuncu = 100, yedek seviyesi = 0; altındakiler negatif.
 - **V7:** Veri kaynağı `nba_api` (stats.nba.com); erişilemezse aynı şemada elle indirilmiş CSV.
-- **V8:** Teknoloji: Python + pandas; PDF için ReportLab + DejaVu Sans; site statik HTML + vanilla JS, çevrimdışı çalışır, yayınlanmaz.
+- **V8:** Teknoloji: Python + pandas; PDF için ReportLab + DejaVu Sans; site statik HTML + vanilla JS, çevrimdışı da çalışır. Canlı yayını kullanıcı kendisi yapar; agent yayın/deploy işlemi yapmaz. `output/site/` herhangi bir statik barındırma servisine olduğu gibi yüklenebilir durumdadır (göreli yollar, sunucu kodu yok).
 - **V9:** Sezon içinde takım değiştiren oyuncu tek satır, takım = son takım.
 - **V10:** Kullanıcıya dönük çıktılar Türkçe ve ondalık virgüllü; kod/CSV İngilizce ve ondalık noktalı.
 - **V11:** Teslimat dosya adları Türkçe karaktersiz: `Hesaplama.md`, `Deger.pdf`.
@@ -246,3 +248,4 @@ fantasy-9cat/
 - **V14:** Testler gerçek veri yerine seed=42 ile üretilmiş 500 satırlık sentetik fikstür kullanır; böylece testler ağsız ve deterministik çalışır.
 - **V15:** Python ≥ 3.11 ve pip + venv; ek paket yöneticisi (uv, poetry) kullanılmaz.
 - **V16:** "Olabildiğince çok oyuncu üzerinden hesapla" şöyle yorumlandı: GP ≥ 1 olan tüm oyuncular her iki modda değerlenip sıralanır; ancak μ ve σ yalnızca 240 kişilik havuzdan hesaplanır. Tüm oyuncuları havuza almak, kadroya hiç girmeyecek yüzlerce yedeğin ortalamayı düşürüp σ'yı şişirmesine ve çarpanların lig gerçeğinden kopmasına yol açar. Havuz büyüklüğü `config.py`'de tek sabittir; değiştirmek kolaydır.
+- **V17:** Oyuncu adları API'den geldiği haliyle kullanılır (ör. "Alperen Sengun" aksansız, "Nikola Jokić" aksanlı); ham veride ad düzeltmesi yapılmaz. Tutarlılık için sitedeki arama aksan duyarsızdır.

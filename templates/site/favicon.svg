@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="9-Cat Değer">
+  <circle cx="32" cy="32" r="29" fill="#ff8a2b" stroke="#1a0e04" stroke-width="3.5"/>
+  <path d="M32 3v58M3 32h58" fill="none" stroke="#1a0e04" stroke-width="3.5"/>
+  <path d="M12.5 10.5C20 16.1 24 23.5 24 32s-4 15.9-11.5 21.5M51.5 10.5C44 16.1 40 23.5 40 32s4 15.9 11.5 21.5" fill="none" stroke="#1a0e04" stroke-width="3.5"/>
+</svg>

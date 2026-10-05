@@ -165,14 +165,6 @@ def test_cli_fetch_validation_error_exits_1(
     assert "doğrulama" in capsys.readouterr().err.lower()
 
 
-@pytest.mark.parametrize("command", ["compute", "report", "site", "all"])
-def test_cli_unimplemented_commands_exit_2(
-    command: str, capsys: pytest.CaptureFixture[str]
-) -> None:
-    assert main([command]) == 2
-    assert "henüz uygulanmadı" in capsys.readouterr().err
-
-
 def test_cli_help_lists_five_commands(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
         main(["--help"])

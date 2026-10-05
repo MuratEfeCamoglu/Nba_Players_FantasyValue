@@ -1,0 +1,49 @@
+{% extends "site/base.html.j2" %}
+{% block title %}Oyuncu Sıralaması{% endblock %}
+{% block content %}
+<header class="page-head">
+  <p class="eyebrow">H2H 9-cat · z-skor değerlemesi</p>
+  <h1>Oyuncu sıralaması</h1>
+  <p class="lead">En az 1 maç oynayan {{ pool.n_players }} oyuncunun değeri. Kategori kolonları z-skorudur: yeşil ve <strong>+</strong> artı, kırmızı ve <strong>−</strong> eksi katkı; ton ne kadar koyuysa fark o kadar büyük. Nasıl hesaplandığı: <a href="hesaplama.html">Hesaplama</a>.</p>
+</header>
+
+<section aria-labelledby="top-title">
+  <div class="section-title">
+    <h2 id="top-title">İlk 10</h2>
+    <p id="top-caption">Sezon toplamı · karta tıklayınca tablodaki ayrıntı açılır</p>
+  </div>
+  <ol class="top-cards" id="top-cards"></ol>
+</section>
+
+<div class="controls" id="controls" data-collapsed="true">
+  <div class="segmented" role="group" aria-label="Değerleme modu">
+    <button type="button" data-mode="total" aria-pressed="true">Toplam</button>
+    <button type="button" data-mode="per_game" aria-pressed="false">Maç başı</button>
+  </div>
+  <button type="button" class="filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="controls-body">Filtreler</button>
+  <div class="controls-body" id="controls-body">
+    <label class="field search-field">
+      <span class="visually-hidden">Oyuncu ara</span>
+      <input type="search" id="search" placeholder="Oyuncu ara (ör. sengun)" autocomplete="off">
+    </label>
+    <label class="field">
+      <span class="visually-hidden">Takım</span>
+      <select id="team"><option value="">Tüm takımlar</option></select>
+    </label>
+    <label class="check" id="only-enough-wrap" hidden>
+      <input type="checkbox" id="only-enough"> Yalnızca GP ≥ {{ league.min_gp_pool_per_game }}
+    </label>
+    <p class="count" id="count" aria-live="polite"></p>
+  </div>
+</div>
+
+<div class="table-wrap ranking-wrap">
+  <table id="ranking" class="ranking">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+</div>
+<noscript><p>Sıralama tablosu için JavaScript gerekir. Aynı sıralama <a href="../Deger.pdf">Deger.pdf</a> içinde de var.</p></noscript>
+
+<script type="application/json" id="players-data">{{ players_json }}</script>
+{% endblock %}

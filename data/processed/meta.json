@@ -1,0 +1,16 @@
+{
+  "converged_per_game": true,
+  "converged_total": true,
+  "iterations_per_game": 5,
+  "iterations_total": 3,
+  "n_players_per_game": 582,
+  "n_players_total": 582,
+  "pool_size": 240,
+  "replacement_raw_per_game": -3.386317,
+  "replacement_raw_total": -3.904382,
+  "season": "2025-26",
+  "season_type": "Regular Season",
+  "source_file": "data/raw/players_2025-26_regular.csv",
+  "source_sha256": "6d4b2d2f8facd79336a55b45613200c656cf587eba079ad5c506bd9909006fee",
+  "warnings": []
+}
