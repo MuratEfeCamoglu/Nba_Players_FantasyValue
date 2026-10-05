@@ -1,5 +1,6 @@
 .venv/
-output/
+   output/*
+   !output/site/
 __pycache__/
 *.py[cod]
 *.egg-info/

@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hesaplama Yöntemi · Fantezi NBA 9-Cat 2025-26</title>
+<script>
+  /* Seçilen temayı ilk boyamadan önce uygula (titreme olmasın); depolama kapalıysa sistem teması. */
+  (function () {
+    try {
+      var t = localStorage.getItem("fantasy9cat-tema");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topband">
+  <div class="wrap topband-inner">
+    <a class="brand" href="index.html"><span class="brand-name">9-Cat <span>Değer</span></span></a>
+    <ul class="facts" aria-label="Veri ve lig bilgisi">
+      <li><strong>2025-26</strong> normal sezonu</li>
+      <li><strong>16 takım × 15</strong> kadro</li>
+      <li>Veri tarihi <strong>05.10.2026</strong></li>
+    </ul>
+    <nav aria-label="Sayfalar">
+      <a href="index.html">Sıralama</a>
+      <a href="hesaplama.html" aria-current="page">Hesaplama</a>
+      <a href="../Deger.pdf">PDF</a>
+    </nav>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Temayı değiştir">
+      <span class="icon" aria-hidden="true"></span><span class="theme-label">Tema</span>
+    </button>
+  </div>
+</header>
+<main class="wrap">
+<div class="doc-layout">
+<nav class="toc" aria-label="Bölümler">
+  <ol>
+    <li><a href="#bolum-1">1. Kategoriler</a></li>
+    <li><a href="#bolum-2">2. Neden Z-Skor?</a></li>
+    <li><a href="#bolum-3">3. Oyuncu Havuzu</a></li>
+    <li><a href="#bolum-4">4. Sayma Kategorileri</a></li>
+    <li><a href="#bolum-5">5. Top Kaybı</a></li>
+    <li><a href="#bolum-6">6. Yüzde Kategorileri ve Hacim</a></li>
+    <li><a href="#bolum-7">7. Çarpan Tablosu</a></li>
+    <li><a href="#bolum-8">8. Maç Sayısının Etkisi</a></li>
+    <li><a href="#bolum-9">9. Ölçekleme</a></li>
+    <li><a href="#bolum-10">10. Çalışılmış Örnek</a></li>
+    <li><a href="#bolum-11">11. Sınırlamalar</a></li>
+  </ol>
+</nav>
+<article class="doc">
+<h1>Fantezi NBA 9-Cat Oyuncu Değerleme — Hesaplama Yöntemi</h1>
+<p>2025-26 NBA normal sezonu · 16 takım × 15 oyunculuk H2H 9-cat lig · 582 oyuncu değerlendi</p>
+<p>Bu belge, <code>values_total.csv</code>, <code>values_per_game.csv</code> ve <code>multipliers.csv</code> dosyalarındaki her sayının nasıl hesaplandığını anlatır. Tüm sayılar aynı veri bağlamından üretilir; ondalık ayırıcı virgüldür, boş değerler "—" ile gösterilir.</p>
+<h2 id="bolum-1">1. Kategoriler</h2>
+<p>9-cat ligde her hafta 9 kategorinin her biri ayrı ayrı kazanılır; her kategori eşit puan değerindedir.</p>
+<div class="table-wrap"><table><thead><tr><th>Kategori</th><th>Kod</th><th>Kısa ad</th><th>Yön</th></tr></thead><tbody><tr><td>Sayı</td><td><code>PTS</code></td><td>PTS</td><td>Çok olan kazanır</td></tr><tr><td>Ribaund</td><td><code>REB</code></td><td>REB</td><td>Çok olan kazanır</td></tr><tr><td>Asist</td><td><code>AST</code></td><td>AST</td><td>Çok olan kazanır</td></tr><tr><td>Üçlük</td><td><code>FG3M</code></td><td>3P</td><td>Çok olan kazanır</td></tr><tr><td>Top çalma</td><td><code>STL</code></td><td>STL</td><td>Çok olan kazanır</td></tr><tr><td>Blok</td><td><code>BLK</code></td><td>BLK</td><td>Çok olan kazanır</td></tr><tr><td>Top kaybı</td><td><code>TOV</code></td><td>TO</td><td>Az olan kazanır</td></tr><tr><td>Saha içi yüzdesi</td><td><code>FG_PCT</code></td><td>FG%</td><td>Yüksek olan kazanır</td></tr><tr><td>Serbest atış yüzdesi</td><td><code>FT_PCT</code></td><td>FT%</td><td>Yüksek olan kazanır</td></tr></tbody></table></div>
+<p>Oynanan maç sayısı (<code>GP</code>) bir kategori değildir; ama sezon toplamlarını doğrudan etkiler (bkz. bölüm 8).</p>
+<h2 id="bolum-2">2. Neden Z-Skor?</h2>
+<p>Kategoriler eşit puan verir ama istatistikler eşit nadirlikte değildir. Bir oyuncunun 100 sayı fazla atması ile 100 blok fazla yapması aynı şey değildir: ligde oyuncular arasındaki blok farkları sayı farklarından çok daha küçüktür, bu yüzden bir blok farkı kategoriyi kazanmaya çok daha fazla katkı yapar.</p>
+<p>Z-skor bu farkı ölçer: bir oyuncunun bir kategoride havuz ortalamasından kaç <strong>standart sapma (σ)</strong> uzakta olduğunu söyler. Böylece farklı birimlerdeki 9 kategori aynı ölçeğe gelir ve toplanabilir.</p>
+<p>Sezon toplamı modunda (bkz. bölüm 7):</p>
+<ul><li>1 blok ≈ <strong>13,948</strong> sayı,</li><li>1 top çalma ≈ <strong>16,309</strong> sayı,</li><li>1 üçlük ≈ <strong>6,270</strong> sayı değerindedir.</li></ul>
+<h2 id="bolum-3">3. Oyuncu Havuzu</h2>
+<p>Ortalama (μ) ve standart sapma (σ), tüm oyunculardan değil, <strong>havuzdaki 240 oyuncudan</strong> hesaplanır (16 takım × 15 kadro). Kadroya hiç girmeyecek yüzlerce yedek oyuncu ortalamayı düşürür ve σ'yı şişirirdi; havuz, ligde gerçekten rekabet eden oyuncuları temsil eder. Havuz yalnızca μ ve σ'yı belirler: sezonda en az 1 maç oynayan <strong>herkes</strong> (582 oyuncu) değerlenir ve sıralanır.</p>
+<p>Havuz kendini belirleyen bir döngüyle bulunur:</p>
+<ol><li>Başlangıç havuzu: dakikaya göre ilk 240 aday.</li><li>Bu havuzdan μ ve σ hesaplanır, herkesin ham değeri bulunur.</li><li>Yeni havuz: ham değere göre ilk 240 aday.</li><li>Havuz değişmeyene kadar (en fazla 10 kez) 2–3 tekrarlanır.</li></ol>
+<div class="table-wrap"><table><thead><tr><th>Mod</th><th>Havuz adayları</th><th>İterasyon</th><th>Yakınsadı mı?</th></tr></thead><tbody><tr><td>Sezon toplamı</td><td>GP ≥ 1 (582 oyuncu)</td><td>3</td><td>Evet</td></tr><tr><td>Maç başı</td><td>GP ≥ 20 (452 oyuncu)</td><td>5</td><td>Evet</td></tr></tbody></table></div>
+<p>Maç başı modda havuza aday olmak için en az 20 maç gerekir; birkaç maçlık örneklemin σ'yı bozmaması için.</p>
+<h2 id="bolum-4">4. Sayma Kategorileri</h2>
+<p>Sayı, ribaund, asist, üçlük, top çalma ve blok için:</p>
+<pre><code>z = (x − μ) / σ</code></pre>
+<p><code>x</code> oyuncunun istatistiği, <code>μ</code> ve <code>σ</code> havuzun ortalaması ve popülasyon standart sapmasıdır. Örneğin sezon toplamı modunda <code>PTS</code> için μ = 911,508, σ = 403,776: ortalamadan 403,776 sayı fazla atan oyuncu bu kategoride +1 z alır.</p>
+<h2 id="bolum-5">5. Top Kaybı</h2>
+<p>Top kaybında az olan kazanır, bu yüzden işaret terstir:</p>
+<pre><code>z = (μ − x) / σ</code></pre>
+<p>Sezon toplamı modunda <code>TOV</code> için μ = 104,454, σ = 52,716. Ortalamadan az top kaybı yapan artı, çok yapan eksi alır.</p>
+<h2 id="bolum-6">6. Yüzde Kategorileri ve Hacim</h2>
+<p>Yüzde kategorileri yüzdeyle değil, <strong>hacim ağırlıklı etki</strong> ile z'lenir. Takımın haftalık yüzdesi toplam isabet / toplam denemedir; çok deneme yapan oyuncu takım yüzdesini çok daha fazla oynatır.</p>
+<pre><code>p_lg = havuzdaki toplam isabet / havuzdaki toplam deneme
+etki = isabet − p_lg × deneme        (= (oyuncu% − p_lg) × deneme; deneme 0 ise etki 0)
+z    = (etki − μ_etki) / σ_etki</code></pre>
+<p>Aynı yüzdeyi tutturan iki oyuncudan çok deneme yapanın etkisi, yüzde lig ortalamasının üstündeyse daha çok artı, altındaysa daha çok eksidir:</p>
+<div class="table-wrap"><table><thead><tr><th>Atış</th><th>Oyuncu %</th><th>Lig %</th><th>Etki</th></tr></thead><tbody><tr><td>6/10</td><td>%60</td><td>%50</td><td>+1,0</td></tr><tr><td>60/100</td><td>%60</td><td>%50</td><td>+10,0</td></tr><tr><td>60/100</td><td>%60</td><td>%65</td><td>-5,0</td></tr></tbody></table></div>
+<p>6/10 ile 60/100 aynı yüzdedir (%60) ama 60/100'ün etkisi 10 kat büyüktür. Lig ortalaması %65 olsaydı aynı 60/100 takımın yüzdesini düşürür ve eksi yazardı.</p>
+<p>Gerçek veride sezon toplamı modunda saha içi lig yüzdesi %48,1. Bu değerle:</p>
+<div class="table-wrap"><table><thead><tr><th>Atış</th><th>Etki</th><th>z (<code>FG_PCT</code>)</th></tr></thead><tbody><tr><td>6/10</td><td>+1,19</td><td>+0,033</td></tr><tr><td>60/100</td><td>+11,93</td><td>+0,327</td></tr></tbody></table></div>
+<p>Deneme sayısı 0 olan oyuncunun yüzdesi tanımsızdır ve "—" ile gösterilir; etkisi 0 kabul edilir, z-skoru yine hesaplanır.</p>
+
+<section class="calculator card" aria-labelledby="calc-title">
+  <h3 id="calc-title">Etki hesaplayıcısı</h3>
+  <p>İsabet ve deneme sayısını girin; etki ve z-skoru sezon toplamı modunun havuz parametreleriyle hesaplanır. Aynı yüzdede deneme arttıkça etki de aynı oranda büyür.</p>
+  <div class="calc-grid">
+    <label class="field">Kategori
+      <select id="calc-category">
+        <option value="FG_PCT">Saha içi (FG)</option>
+        <option value="FT_PCT">Serbest atış (FT)</option>
+      </select>
+    </label>
+    <label class="field">İsabet
+      <input type="number" id="calc-made" min="0" step="1" value="6" inputmode="numeric">
+    </label>
+    <label class="field">Deneme
+      <input type="number" id="calc-attempts" min="0" step="1" value="10" inputmode="numeric">
+    </label>
+  </div>
+  <dl class="calc-out">
+    <div><dt>Lig yüzdesi</dt><dd id="calc-league">—</dd></div>
+    <div><dt>Oyuncu yüzdesi</dt><dd id="calc-pct">—</dd></div>
+    <div class="calc-key"><dt>Etki</dt><dd id="calc-impact">—</dd></div>
+    <div class="calc-key"><dt>z-skoru</dt><dd id="calc-z">—</dd></div>
+  </dl>
+  <p class="calc-formula" id="calc-formula"></p>
+  <p class="calc-error" id="calc-error" hidden></p>
+  <script type="application/json" id="calc-params">{"FG_PCT":{"label":"Saha içi yüzdesi","league_pct":0.480736,"mu":0.0,"sigma":36.516101},"FT_PCT":{"label":"Serbest atış yüzdesi","league_pct":0.789277,"mu":0.0,"sigma":17.095233}}</script>
+</section>
+
+<h2 id="bolum-7">7. Çarpan Tablosu</h2>
+<ul><li><strong>μ, σ:</strong> havuzun ortalaması ve popülasyon standart sapması (yüzde kategorilerinde etkinin).</li><li><strong>Çarpan = 1 / σ:</strong> bir kategorideki 1 birimlik istatistiğin z-skor karşılığı. Yüzde kategorilerinde birim "lig ortalamasının üstündeki 1 isabet"tir.</li><li><strong>Sayı eşdeğeri = σ_PTS / σ:</strong> 1 birimin kaç sayıya denk geldiği.</li><li><strong>Ortalama oranı = μ_PTS / μ:</strong> yalnızca bilgi amaçlı; yüzde kategorilerinde etki ortalaması ≈ 0 olduğundan boştur.</li></ul>
+<p><strong>Neden ortalama değil de σ?</strong> Kategoriyi kazanmak, rakiplerden <em>ne kadar ayrıştığına</em> bağlıdır. Ortalama oranı bir istatistiğin ne kadar sık olduğunu söyler; σ ise oyuncuların o kategoride birbirinden ne kadar farklılaştığını. Örneğin bloklarda ortalama düşüktür ama asıl önemli olan, bir oyuncunun bloklarla havuzdan ne kadar ayrışabildiğidir; bunu σ ölçer.</p>
+
+<figure class="pe-chart card" aria-labelledby="pe-title">
+  <figcaption id="pe-title">1 birim kaç sayı eder?
+    <small>Sayı eşdeğeri = σ_PTS / σ. Örnek: sezon toplamında 1 blok = 13,948 sayı. Yüzde kategorilerinde birim, lig ortalamasının üstündeki 1 isabettir.</small>
+  </figcaption>
+  <ul class="pe-legend">
+    <li class="total">Sezon toplamı</li>
+    <li class="per-game">Maç başı</li>
+  </ul>
+  <ol class="pe-rows">
+    <li class="pe-row" data-category="PTS" data-total="1,000" data-per-game="1,000">
+      <div class="pe-name"><strong>1 sayı</strong><span>PTS</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:4.2%"></div></div><span class="pe-num">1,000 sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:4.2%"></div></div><span class="pe-num">1,000 sayı</span></div>
+      </div>
+    </li>
+    <li class="pe-row" data-category="REB" data-total="2,687" data-per-game="2,690">
+      <div class="pe-name"><strong>1 ribaund</strong><span>REB</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:11.4%"></div></div><span class="pe-num">2,687 sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:11.4%"></div></div><span class="pe-num">2,690 sayı</span></div>
+      </div>
+    </li>
+    <li class="pe-row" data-category="AST" data-total="3,073" data-per-game="3,013">
+      <div class="pe-name"><strong>1 asist</strong><span>AST</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:13.0%"></div></div><span class="pe-num">3,073 sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:12.8%"></div></div><span class="pe-num">3,013 sayı</span></div>
+      </div>
+    </li>
+    <li class="pe-row" data-category="FG3M" data-total="6,270" data-per-game="6,321">
+      <div class="pe-name"><strong>1 üçlük</strong><span>3P</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:26.5%"></div></div><span class="pe-num">6,270 sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:26.8%"></div></div><span class="pe-num">6,321 sayı</span></div>
+      </div>
+    </li>
+    <li class="pe-row" data-category="STL" data-total="16,309" data-per-game="16,804">
+      <div class="pe-name"><strong>1 top çalma</strong><span>STL</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:69.0%"></div></div><span class="pe-num">16,309 sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:71.1%"></div></div><span class="pe-num">16,804 sayı</span></div>
+      </div>
+    </li>
+    <li class="pe-row" data-category="BLK" data-total="13,948" data-per-game="13,297">
+      <div class="pe-name"><strong>1 blok</strong><span>BLK</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:59.1%"></div></div><span class="pe-num">13,948 sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:56.3%"></div></div><span class="pe-num">13,297 sayı</span></div>
+      </div>
+    </li>
+    <li class="pe-row" data-category="TOV" data-total="7,659" data-per-game="7,372">
+      <div class="pe-name"><strong>1 top kaybı daha az</strong><span>TO</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:32.4%"></div></div><span class="pe-num">7,659 sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:31.2%"></div></div><span class="pe-num">7,372 sayı</span></div>
+      </div>
+    </li>
+    <li class="pe-row" data-category="FG_PCT" data-total="11,057" data-per-game="10,242">
+      <div class="pe-name"><strong>Ortalamanın üstünde 1 saha içi isabet</strong><span>FG%</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:46.8%"></div></div><span class="pe-num">11,057 sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:43.4%"></div></div><span class="pe-num">10,242 sayı</span></div>
+      </div>
+    </li>
+    <li class="pe-row" data-category="FT_PCT" data-total="23,619" data-per-game="20,692">
+      <div class="pe-name"><strong>Ortalamanın üstünde 1 serbest atış isabeti</strong><span>FT%</span></div>
+      <div class="pe-bars">
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar total" style="width:100.0%"></div></div><span class="pe-num">23,619 sayı</span></div>
+        <div class="pe-line"><div class="pe-track"><div class="pe-bar per-game" style="width:87.6%"></div></div><span class="pe-num">20,692 sayı</span></div>
+      </div>
+    </li>
+  </ol>
+</figure>
+
+<h3>Sezon toplamı</h3>
+<!-- mode:total -->
+<div class="table-wrap"><table><thead><tr><th>Kategori</th><th>μ</th><th>σ</th><th>Çarpan (1/σ)</th><th>Sayı eşdeğeri</th><th>Ortalama oranı</th><th>Lig %</th></tr></thead><tbody><tr><td>Sayı (<code>PTS</code>)</td><td>911,508</td><td>403,776</td><td>0,002477</td><td>1,000</td><td>1,000</td><td>—</td></tr><tr><td>Ribaund (<code>REB</code>)</td><td>333,246</td><td>150,285</td><td>0,006654</td><td>2,687</td><td>2,735</td><td>—</td></tr><tr><td>Asist (<code>AST</code>)</td><td>206,900</td><td>131,410</td><td>0,007610</td><td>3,073</td><td>4,406</td><td>—</td></tr><tr><td>Üçlük (<code>FG3M</code>)</td><td>100,221</td><td>64,402</td><td>0,015527</td><td>6,270</td><td>9,095</td><td>—</td></tr><tr><td>Top çalma (<code>STL</code>)</td><td>63,087</td><td>24,759</td><td>0,040390</td><td>16,309</td><td>14,448</td><td>—</td></tr><tr><td>Blok (<code>BLK</code>)</td><td>38,212</td><td>28,948</td><td>0,034544</td><td>13,948</td><td>23,854</td><td>—</td></tr><tr><td>Top kaybı (<code>TOV</code>)</td><td>104,454</td><td>52,716</td><td>0,018970</td><td>7,659</td><td>8,726</td><td>—</td></tr><tr><td>Saha içi yüzdesi (<code>FG_PCT</code>)</td><td>0,000</td><td>36,516</td><td>0,027385</td><td>11,057</td><td>—</td><td>%48,07</td></tr><tr><td>Serbest atış yüzdesi (<code>FT_PCT</code>)</td><td>0,000</td><td>17,095</td><td>0,058496</td><td>23,619</td><td>—</td><td>%78,93</td></tr></tbody></table></div>
+<!-- /mode -->
+<h3>Maç başı</h3>
+<!-- mode:per_game -->
+<div class="table-wrap"><table><thead><tr><th>Kategori</th><th>μ</th><th>σ</th><th>Çarpan (1/σ)</th><th>Sayı eşdeğeri</th><th>Ortalama oranı</th><th>Lig %</th></tr></thead><tbody><tr><td>Sayı (<code>PTS</code>)</td><td>14,416</td><td>5,832</td><td>0,171475</td><td>1,000</td><td>1,000</td><td>—</td></tr><tr><td>Ribaund (<code>REB</code>)</td><td>5,145</td><td>2,168</td><td>0,461305</td><td>2,690</td><td>2,802</td><td>—</td></tr><tr><td>Asist (<code>AST</code>)</td><td>3,196</td><td>1,936</td><td>0,516622</td><td>3,013</td><td>4,511</td><td>—</td></tr><tr><td>Üçlük (<code>FG3M</code>)</td><td>1,544</td><td>0,923</td><td>1,083828</td><td>6,321</td><td>9,338</td><td>—</td></tr><tr><td>Top çalma (<code>STL</code>)</td><td>0,965</td><td>0,347</td><td>2,881533</td><td>16,804</td><td>14,934</td><td>—</td></tr><tr><td>Blok (<code>BLK</code>)</td><td>0,593</td><td>0,439</td><td>2,280172</td><td>13,297</td><td>24,318</td><td>—</td></tr><tr><td>Top kaybı (<code>TOV</code>)</td><td>1,638</td><td>0,791</td><td>1,264163</td><td>7,372</td><td>8,799</td><td>—</td></tr><tr><td>Saha içi yüzdesi (<code>FG_PCT</code>)</td><td>0,000</td><td>0,569</td><td>1,756186</td><td>10,242</td><td>—</td><td>%48,17</td></tr><tr><td>Serbest atış yüzdesi (<code>FT_PCT</code>)</td><td>0,000</td><td>0,282</td><td>3,548184</td><td>20,692</td><td>—</td><td>%79,23</td></tr></tbody></table></div>
+<!-- /mode -->
+<h2 id="bolum-8">8. Maç Sayısının Etkisi</h2>
+<p>Ana sıralama <strong>sezon toplamı</strong> üzerindendir: çok maç oynayan daha çok katkı (ve daha çok top kaybı) üretir, fantezi takımına da o kadar çok hafta katkı verir. <strong>Maç başı</strong> sıralama, oyuncunun sahadayken ne ürettiğini gösterir; sakatlık nedeniyle az oynayanlar burada yükselir. Maç başı modda 20 maçtan az oynayan 130 oyuncu sıralamada yer alır ama "az maç" olarak işaretlenir ve havuza giremez.</p>
+<p>Sezon toplamında ilk 10:</p>
+<div class="table-wrap"><table><thead><tr><th>Oyuncu</th><th>Takım</th><th>MS</th><th>Toplam sırası</th><th>Toplam değer</th><th>Maç başı sırası</th><th>Maç başı değer</th></tr></thead><tbody><tr><td>Nikola Jokić</td><td>DEN</td><td>65</td><td>1</td><td>100,0</td><td>1</td><td>100,0</td></tr><tr><td>Shai Gilgeous-Alexander</td><td>OKC</td><td>68</td><td>2</td><td>94,5</td><td>3</td><td>86,2</td></tr><tr><td>Victor Wembanyama</td><td>SAS</td><td>64</td><td>3</td><td>92,6</td><td>2</td><td>93,6</td></tr><tr><td>Tyrese Maxey</td><td>PHI</td><td>70</td><td>4</td><td>84,7</td><td>5</td><td>75,3</td></tr><tr><td>Kawhi Leonard</td><td>LAC</td><td>65</td><td>5</td><td>78,2</td><td>4</td><td>76,9</td></tr><tr><td>Scottie Barnes</td><td>TOR</td><td>80</td><td>6</td><td>76,7</td><td>13</td><td>53,9</td></tr><tr><td>Kevin Durant</td><td>HOU</td><td>78</td><td>7</td><td>74,0</td><td>14</td><td>52,5</td></tr><tr><td>Jamal Murray</td><td>DEN</td><td>75</td><td>8</td><td>73,2</td><td>11</td><td>56,4</td></tr><tr><td>Luka Dončić</td><td>LAL</td><td>64</td><td>9</td><td>67,4</td><td>6</td><td>69,7</td></tr><tr><td>Donovan Mitchell</td><td>CLE</td><td>70</td><td>10</td><td>67,4</td><td>7</td><td>58,4</td></tr></tbody></table></div>
+<p>Maç başı sıralamada en çok yükselen 5 oyuncu (GP ≥ 20):</p>
+<div class="table-wrap"><table><thead><tr><th>Oyuncu</th><th>Takım</th><th>MS</th><th>Toplam sırası</th><th>Maç başı sırası</th><th>Fark</th></tr></thead><tbody><tr><td>Anthony Davis</td><td>WAS</td><td>20</td><td>289</td><td>22</td><td>+267</td></tr><tr><td>Keegan Murray</td><td>SAC</td><td>23</td><td>309</td><td>88</td><td>+221</td></tr><tr><td>Ja Morant</td><td>MEM</td><td>20</td><td>348</td><td>143</td><td>+205</td></tr><tr><td>Tyler Herro</td><td>MIA</td><td>33</td><td>226</td><td>48</td><td>+178</td></tr><tr><td>Kristaps Porziņģis</td><td>GSW</td><td>32</td><td>254</td><td>76</td><td>+178</td></tr></tbody></table></div>
+<h2 id="bolum-9">9. Ölçekleme</h2>
+<p>Ham değer (9 z-skorun toplamı) 0–100 ölçeğine taşınır:</p>
+<pre><code>değer = 100 × (ham − ham_yedek) / (ham_1 − ham_yedek)</code></pre>
+<ul><li><code>ham_1</code>: havuz adayları arasında en yüksek ham değer (Nikola Jokić, 12,418) → 100.</li><li><code>ham_yedek</code>: havuz adayları arasında 241. sıradaki ham değer (-3,904) → 0. Bu, 16 takımın toplam 240 kadro yerine giremeyen ilk oyuncu, yani serbest oyuncu (yedek) seviyesidir.</li><li>Yedek seviyesinin altındaki oyuncular negatif değer alır.</li></ul>
+<p>Örnek: 100. sıradaki Quentin Grimes, ham -0,256 → 100 × (-0,256 − (-3,904)) / (12,418 − (-3,904)) = <strong>22,4</strong> (CSV: 22,4).</p>
+<p>Maç başı modda ölçeği yalnızca GP ≥ 20 adaylar belirler (ham_1 = 12,753, ham_yedek = -3,386). Daha az maç oynayanların değeri aynı ölçekle hesaplanır ve 100'ü aşabilir (bu sezon 0 oyuncu).</p>
+<h2 id="bolum-10">10. Çalışılmış Örnek</h2>
+<p>Sezon toplamı modunda 1. sıradaki oyuncu: <strong>Nikola Jokić</strong> (DEN, 65 maç). μ ve σ, bölüm 7'deki tablodan alınır.</p>
+<div class="table-wrap"><table><thead><tr><th>Kategori</th><th>Oyuncu</th><th>μ</th><th>σ</th><th>Hesap</th><th>z</th></tr></thead><tbody><tr><td>Sayı (<code>PTS</code>)</td><td>1799</td><td>911,508</td><td>403,776</td><td>(1799 − 911,508) / 403,776</td><td>+2,198</td></tr><tr><td>Ribaund (<code>REB</code>)</td><td>836</td><td>333,246</td><td>150,285</td><td>(836 − 333,246) / 150,285</td><td>+3,345</td></tr><tr><td>Asist (<code>AST</code>)</td><td>697</td><td>206,900</td><td>131,410</td><td>(697 − 206,900) / 131,410</td><td>+3,730</td></tr><tr><td>Üçlük (<code>FG3M</code>)</td><td>112</td><td>100,221</td><td>64,402</td><td>(112 − 100,221) / 64,402</td><td>+0,183</td></tr><tr><td>Top çalma (<code>STL</code>)</td><td>92</td><td>63,087</td><td>24,759</td><td>(92 − 63,087) / 24,759</td><td>+1,168</td></tr><tr><td>Blok (<code>BLK</code>)</td><td>53</td><td>38,212</td><td>28,948</td><td>(53 − 38,212) / 28,948</td><td>+0,511</td></tr><tr><td>Top kaybı (<code>TOV</code>)</td><td>243</td><td>104,454</td><td>52,716</td><td>(104,454 − 243) / 52,716</td><td>-2,628</td></tr><tr><td>Saha içi yüzdesi (<code>FG_PCT</code>)</td><td>644/1132 (%56,9)</td><td>0,000</td><td>36,516</td><td>etki = 644 − 0,4807 × 1132 = +99,807; z = (+99,807 − 0,000) / 36,516</td><td>+2,733</td></tr><tr><td>Serbest atış yüzdesi (<code>FT_PCT</code>)</td><td>399/480 (%83,1)</td><td>0,000</td><td>17,095</td><td>etki = 399 − 0,7893 × 480 = +20,147; z = (+20,147 − 0,000) / 17,095</td><td>+1,179</td></tr></tbody></table></div>
+<p>Toplam z (ham değer): <strong>12,418</strong> (CSV'deki <code>raw_total</code>: 12,418). Ölçeklenmiş değer: <strong>100,0</strong>.</p>
+<p>Küçük farklar, tablodaki μ ve σ'nın 6 ondalığa yuvarlanmış olmasından gelir.</p>
+<h2 id="bolum-11">11. Sınırlamalar</h2>
+<ul><li><strong>Az maç oynayanlar toplam modda top kaybından artı alır.</strong> Top kaybı sezon toplamı olarak sayıldığı için az oynayan oyuncunun top kaybı da azdır. Örneğin Haywood Highsmith 7 maçta 0 top kaybıyla bu kategoride en yüksek z'yi aldı (+1,981). Diğer kategorilerdeki eksi değerler bunu genellikle dengeler, ama sıralamanın alt kısmında etkisi görülebilir.</li><li><strong>Kategori ağırlıkları eşittir.</strong> Her kategori 1 puan sayılır; "punt" (bir kategoriyi bilerek bırakma) stratejileri hesaba katılmaz.</li><li><strong>Geçmiş veri geleceği garanti etmez.</strong> Değerler 2025-26 normal sezonunun kapanmış verisine dayanır; yaş, sakatlık, rol ve takım değişiklikleri yansıtılmaz.</li><li><strong>Maç başı değer az örneklemde yanıltıcı olabilir.</strong> 20 maçtan az oynayan oyuncular işaretlenir; değerleri dikkatle yorumlanmalıdır.</li><li><strong>Tanımsız yüzdeler.</strong> Hiç deneme yapmayan oyuncuların ilgili yüzdesi "—" ile gösterilir (19 oyuncu); etkileri 0 kabul edilir.</li><li><strong>Havuz yaklaşıktır.</strong> 240 kişilik havuz, gerçek liglerdeki kadro seçimlerini birebir yansıtmaz; havuz büyüklüğü tek bir ayarla değiştirilebilir.</li></ul>
+
+</article>
+</div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    Veri: stats.nba.com · 2025-26 normal sezonu · havuz 240 oyuncu · Değer ölçeği: 1. aday = 100, 241. aday (yedek seviyesi) = 0 · Fontlar: Inter ve Barlow Condensed (SIL OFL 1.1)
+  </div>
+</footer>
+<script src="assets/app.js"></script>
+</body>
+</html>
