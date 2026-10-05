@@ -1,0 +1,3 @@
+# GitHub dil istatistiği (Linguist): output/ altı `python -m fantasy9cat all` ile üretilir.
+# Dosyalar depoda kalır (Vercel yayını için); yalnızca dil çubuğunda sayılmaz.
+output/** linguist-generated=true
