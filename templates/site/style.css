@@ -57,7 +57,7 @@
   --yaricap-kucuk: 6px;
   --cizgi: 1px;
   --genislik-icerik: 1240px;
-  --genislik-sira: 3.25rem;
+  --genislik-sira: 4.5rem;
   --genislik-oyuncu: 12rem;
   --genislik-kart: 18rem;
   --yukseklik-mini: 2.75rem;
@@ -698,6 +698,10 @@ thead th {
   left: 0;
   width: var(--genislik-sira);
   min-width: var(--genislik-sira);
+  max-width: var(--genislik-sira);
+  padding-right: var(--aralik-2);
+  padding-left: var(--aralik-2);
+  overflow: hidden;
 }
 
 .ranking .col-name {

@@ -485,3 +485,13 @@ def test_favicon_is_local_svg(site_dir: Path, index_html: str, hesaplama_html: s
         assert '<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">' in html
     svg = (site_dir / "assets" / "favicon.svg").read_text(encoding="utf-8")
     assert svg.lstrip().startswith("<svg") and svg.rstrip().endswith("</svg>")
+
+
+def test_sticky_rank_column_has_fixed_width() -> None:
+    """Sabit 'Oyuncu' kolonu sıra kolonunun bittiği yere yapışır; sıra kolonu genişleyemez."""
+    css = _css()
+    block = css.split(".ranking .col-rank {")[1].split("}")[0]
+    for prop in ("width", "min-width", "max-width"):
+        assert re.search(rf"(?<![-\w]){prop}:\s*var\(--genislik-sira\)", block), prop
+    name_blocks = [b.split("}")[0] for b in css.split(".ranking .col-name {")[1:]]
+    assert any("left: var(--genislik-sira)" in b for b in name_blocks)
